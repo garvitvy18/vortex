@@ -538,6 +538,15 @@ Word Emulator::get_csr(uint32_t addr, uint32_t tid, uint32_t wid) {
       switch (perf_class) {
       case VX_DCR_MPM_CLASS_NONE:
         break;
+      case VX_DCR_MPM_CLASS_3: {
+      // Add your custom counters here for Class 3:
+       //switch (addr){
+       CSR_READ_64(VX_CSR_MPM_TOTAL_ISSUED_WARPS, core_perf.total_issued_warps);
+       fprintf(stderr,"DEBUG: total_issued_warps = %lu\n", core_perf.total_issued_warps);  // Debug print
+       CSR_READ_64(VX_CSR_MPM_TOTAL_ACTIVE_THREADS, core_perf.total_active_threads);
+       fprintf(stderr,"DEBUG: total_active_threads = %lu\n", core_perf.total_active_threads);  // Debug print
+      // }
+      } break;
       case VX_DCR_MPM_CLASS_CORE: {
         switch (addr) {
         CSR_READ_64(VX_CSR_MPM_SCHED_ID, core_perf.sched_idle);

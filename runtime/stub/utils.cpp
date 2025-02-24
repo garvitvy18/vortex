@@ -160,7 +160,6 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
   uint64_t total_instrs = 0;
   uint64_t total_cycles = 0;
   uint64_t max_cycles = 0;
-
   auto calcRatio = [&](uint64_t part, uint64_t total)->int {
     if (total == 0)
       return 0;
@@ -212,7 +211,9 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
   uint64_t mem_writes = 0;
   uint64_t mem_lat = 0;
   uint64_t mem_bank_stalls = 0;
-
+// PERF: CLASS_3
+  uint64_t total_issued_warps = 0;
+  uint64_t total_active_threads = 0;
   uint64_t num_cores;
   CHECK_ERR(vx_dev_caps(hdevice, VX_CAPS_NUM_CORES, &num_cores), {
     return err;
@@ -248,6 +249,42 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
     });
 
     switch (perf_class) {
+
+    case VX_DCR_MPM_CLASS_3:
+    {
+      uint64_t threads_per_warp;
+      CHECK_ERR(vx_dev_caps(hdevice, VX_CAPS_NUM_THREADS, &threads_per_warp), {
+        return err;
+      });
+      // Retrieve total_issued_warps and total_active_threads for each core
+fprintf(stderr,"DEBUG: threads_per_warp = %lu\n", threads_per_warp);
+      // Query total_issued_warps for the core
+      uint64_t total_issued_warps_per_core;
+      CHECK_ERR(vx_mpm_query(hdevice, VX_CSR_MPM_TOTAL_ISSUED_WARPS, core_id, &total_issued_warps_per_core), {
+        return err;
+      });
+  fprintf(stderr,"DEBUG: core%d total_issued_warps = %lu\n", core_id, total_issued_warps_per_core);
+      // Query total_active_threads for the core
+      uint64_t total_active_threads_per_core;
+      CHECK_ERR(vx_mpm_query(hdevice, VX_CSR_MPM_TOTAL_ACTIVE_THREADS, core_id, &total_active_threads_per_core), {
+        return err;
+      });
+  fprintf(stderr,"DEBUG: core%d total_active_threads = %lu\n", core_id, total_active_threads_per_core);
+
+      // Print total_issued_warps and total_active_threads
+      if (num_cores > 1) {
+        // Calculate and print warp efficiency
+        int warp_efficiency = calcAvgPercent(total_active_threads_per_core, total_issued_warps_per_core * threads_per_warp);
+        fprintf(stream, "PERF: core%d: Warp Efficiency=%d%%\n", core_id, warp_efficiency);
+      }
+
+      // Accumulate totals for all cores
+      total_issued_warps += total_issued_warps_per_core;
+      total_active_threads += total_active_threads_per_core;
+   fprintf(stderr,"DEBUG: Accumulating totals for all cores. Total_issued_warps = %lu, Total_active_threads = %lu\n", 
+        total_issued_warps, total_active_threads);
+    }
+    break; 
     case VX_DCR_MPM_CLASS_CORE: {
       // PERF: pipeline
       // scheduler idles
@@ -567,6 +604,16 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
   }
 
   switch (perf_class) {
+
+   case VX_DCR_MPM_CLASS_3: {
+    uint64_t threads_per_warp;
+    CHECK_ERR(vx_dev_caps(hdevice, VX_CAPS_NUM_THREADS, &threads_per_warp), {
+      return err;
+    });
+    // Calculate and print warp efficiency
+    int warp_efficiency = calcAvgPercent(total_active_threads, total_issued_warps * threads_per_warp);
+    fprintf(stream, "PERF: Warp Efficiency=%d%%\n", warp_efficiency);
+  } break; 
   case VX_DCR_MPM_CLASS_CORE: {
     int sched_idles_percent = calcAvgPercent(sched_idles, total_cycles);
     int sched_stalls_percent = calcAvgPercent(sched_stalls, total_cycles);

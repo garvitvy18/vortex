@@ -202,7 +202,9 @@ void Core::schedule() {
 
   // suspend warp until decode
   emulator_.suspend(trace->wid);
-
+// track active threads
+  perf_stats_.total_issued_warps += 1;
+  perf_stats_.total_active_threads += trace->tmask.count();
   DT(3, "pipeline-schedule: " << *trace);
 
   // advance to fetch stage
