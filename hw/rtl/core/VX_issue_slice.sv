@@ -43,6 +43,7 @@ module VX_issue_slice import VX_gpu_pkg::*; #(
         .reset          (reset),
      `ifdef PERF_ENABLE
         .perf_stalls    (issue_perf.ibf_stalls),
+        .perf_ibf_pops_out (issue_perf.ibf_pops),
      `endif
         .decode_if      (decode_if),
         .ibuffer_if     (ibuffer_if)

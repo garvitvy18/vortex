@@ -21,6 +21,7 @@ module VX_ibuffer import VX_gpu_pkg::*; #(
 
 `ifdef PERF_ENABLE
     output wire [`PERF_CTR_BITS-1:0] perf_stalls,
+    output wire [`PERF_CTR_BITS-1:0] perf_ibf_pops_out,	    
 `endif
 
     // inputs
@@ -66,12 +67,34 @@ module VX_ibuffer import VX_gpu_pkg::*; #(
         assign decode_if.ibuf_pop[w] = ibuffer_if[w].valid && ibuffer_if[w].ready;
     `endif
     end
-
+/*
 `ifdef PERF_ENABLE
     reg [`PERF_CTR_BITS-1:0] perf_ibf_stalls;
-
+    reg [`PERF_CTR_BITS-1:0] perf_ibf_pops;
+    integer i;
     wire decode_if_stall = decode_if.valid && ~decode_if.ready;
 
+    always @(posedge clk) begin
+        if (reset) begin
+            perf_ibf_stalls <= '0;
+            perf_ibf_pops <= '0;
+        end else begin
+            perf_ibf_stalls <= perf_ibf_stalls + `PERF_CTR_BITS'(decode_if_stall);
+            for (i = 0; i < PER_ISSUE_WARPS; i = i + 1) begin
+                if (ibuffer_if[i].valid && ibuffer_if[i].ready)
+                    perf_ibf_pops <= perf_ibf_pops + `PERF_CTR_BITS'(1);
+            end
+        end
+    end
+
+    assign perf_stalls = perf_ibf_stalls;
+    assign perf_ibf_pops_out = perf_ibf_pops;
+`endif
+*/
+`ifdef PERF_ENABLE
+    // Existing ibuffer stall counter
+    reg [`PERF_CTR_BITS-1:0] perf_ibf_stalls;
+    wire decode_if_stall = decode_if.valid && ~decode_if.ready;
     always @(posedge clk) begin
         if (reset) begin
             perf_ibf_stalls <= '0;
@@ -79,8 +102,29 @@ module VX_ibuffer import VX_gpu_pkg::*; #(
             perf_ibf_stalls <= perf_ibf_stalls + `PERF_CTR_BITS'(decode_if_stall);
         end
     end
-
     assign perf_stalls = perf_ibf_stalls;
+
+    // New Performance Counter: IBF Pops
+    wire [PER_ISSUE_WARPS-1:0] ibuf_pop_events;
+    genvar j;
+    generate
+        for (j = 0; j < PER_ISSUE_WARPS; j = j + 1) begin : gen_ibuf_pop
+            assign ibuf_pop_events[j] = ibuffer_if[j].valid && ~ibuffer_if[j].ready;
+        end
+    endgenerate
+
+    // $countones returns the number of bits set to 1.
+    reg [`PERF_CTR_BITS-1:0] perf_ibf_pops;
+    always @(posedge clk) begin
+        if (reset) begin
+            perf_ibf_pops <= '0;
+        end else begin
+            // Add the number of pop events (from all instances) to the accumulator.
+            perf_ibf_pops <= perf_ibf_pops + `PERF_CTR_BITS'($countones(ibuf_pop_events));
+        end
+    end
+
+    assign perf_ibf_pops_out = perf_ibf_pops;
 `endif
 
 endmodule

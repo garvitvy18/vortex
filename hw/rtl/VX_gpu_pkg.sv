@@ -103,6 +103,7 @@ package VX_gpu_pkg;
         logic [`PERF_CTR_BITS-1:0] opd_stalls;
         logic [`NUM_EX_UNITS-1:0][`PERF_CTR_BITS-1:0] units_uses;
         logic [`NUM_SFU_UNITS-1:0][`PERF_CTR_BITS-1:0] sfu_uses;
+	logic [`PERF_CTR_BITS-1:0] ibf_pops;
     } issue_perf_t;
 
     typedef struct packed {

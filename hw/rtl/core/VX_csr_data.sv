@@ -214,6 +214,7 @@ import VX_fpu_pkg::*;
     			// Add your custom counters here for Class 3:
     			`CSR_READ_64(`VX_CSR_MPM_TOTAL_ISSUED_WARPS, read_data_ro_w, pipeline_perf.sched.total_issued_warps);
     			`CSR_READ_64(`VX_CSR_MPM_TOTAL_ACTIVE_THREADS, read_data_ro_w, pipeline_perf.sched.total_active_threads);
+			`CSR_READ_64(`VX_CSR_MPM_IBUF_POPS, read_data_ro_w, pipeline_perf.issue.ibf_pops);
     			default:;
     			endcase
 		    end		    

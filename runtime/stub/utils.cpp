@@ -215,6 +215,7 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
   uint64_t total_issued_warps = 0;
   uint64_t total_active_threads = 0;
   uint64_t num_cores;
+  uint64_t total_ibf_pops = 0;
   CHECK_ERR(vx_dev_caps(hdevice, VX_CAPS_NUM_CORES, &num_cores), {
     return err;
   });
@@ -270,6 +271,13 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
 	  });
 	  fprintf(stderr,"DEBUG: core%d total_active_threads = %lu\n", core_id, total_active_threads_per_core);
 	  // Print total_issued_warps and total_active_threads
+	  //
+    uint64_t ibf_pops;
+    CHECK_ERR(vx_mpm_query(hdevice, VX_CSR_MPM_IBUF_POPS, core_id, &ibf_pops), {
+      return err;
+    });
+    fprintf(stream, "PERF: core%d: ibuffer pops = %lu\n", core_id, ibf_pops);
+    total_ibf_pops += ibf_pops;
 	  if (num_cores > 1) {
 	    // Calculate and print warp efficiency
 	    int warp_efficiency = calcAvgPercent(total_active_threads_per_core, total_issued_warps_per_core * threads_per_warp);

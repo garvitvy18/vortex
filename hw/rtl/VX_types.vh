@@ -186,6 +186,8 @@
 `define VX_CSR_MPM_TOTAL_ISSUED_WARPS_H   12'hB83
 `define VX_CSR_MPM_TOTAL_ACTIVE_THREADS   12'hB04
 `define VX_CSR_MPM_TOTAL_ACTIVE_THREADS_H 12'hB84
+`define VX_CSR_MPM_IBUF_POPS     12'hB05
+`define VX_CSR_MPM_IBUF_POPS_H   12'hB85 
 // Machine Information Registers //////////////////////////////////////////////
 
 `define VX_CSR_MVENDORID                12'hF11
