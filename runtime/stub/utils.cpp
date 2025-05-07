@@ -272,12 +272,30 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
 	  fprintf(stderr,"DEBUG: core%d total_active_threads = %lu\n", core_id, total_active_threads_per_core);
 	  // Print total_issued_warps and total_active_threads
 	  //
-    uint64_t ibf_pops;
-    CHECK_ERR(vx_mpm_query(hdevice, VX_CSR_MPM_IBUF_POPS, core_id, &ibf_pops), {
-      return err;
-    });
-    fprintf(stream, "PERF: core%d: ibuffer pops = %lu\n", core_id, ibf_pops);
-    total_ibf_pops += ibf_pops;
+	uint64_t ibf_pops;
+        CHECK_ERR(vx_mpm_query(hdevice, VX_CSR_MPM_IBUF_POPS, core_id, &ibf_pops), {
+            return err;
+        });
+
+        // accumulate for the global summary
+        total_ibf_pops += ibf_pops;
+
+        // print per-core with percentage over *thread-slots* (cycles×warp_size)
+        if (num_cores > 1) {
+            int ibf_pct = calcAvgPercent(
+                ibf_pops,
+                cycles_per_core * threads_per_warp
+            );
+            fprintf(stream,
+                "PERF: core%u: ibuffer pops = %lu (%d%%)\n",
+                core_id, ibf_pops, ibf_pct
+            );
+        } else {
+            fprintf(stream,
+                "PERF: core%u: ibuffer pops = %lu\n",
+                core_id, ibf_pops
+            );
+        }
 	  if (num_cores > 1) {
 	    // Calculate and print warp efficiency
 	    int warp_efficiency = calcAvgPercent(total_active_threads_per_core, total_issued_warps_per_core * threads_per_warp);
@@ -617,6 +635,16 @@ extern int vx_dump_perf(vx_device_h hdevice, FILE* stream) {
 	  // Calculate and print warp efficiency
 	  int warp_efficiency = calcAvgPercent(total_active_threads, total_issued_warps * threads_per_warp);
 	  fprintf(stream, "PERF: Warp Efficiency=%d%%\n", warp_efficiency);
+               
+	    int total_ibf_pct = calcAvgPercent(
+            total_ibf_pops,
+            total_cycles * threads_per_warp
+        );
+        fprintf(stream,
+            "PERF: ibuffer pops = %lu (%d%%)\n",
+            total_ibf_pops,
+            total_ibf_pct
+        );
 	} break;
   case VX_DCR_MPM_CLASS_CORE: {
     int sched_idles_percent = calcAvgPercent(sched_idles, total_cycles);
